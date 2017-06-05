@@ -1,40 +1,66 @@
 module NOAAData
 
+import Base.string
+
 using Requests
 using DataTables
 using IndexedTables
 # https://www.ncdc.noaa.gov/cdo-web/api/v2/data?datasetid=GHCND&locationid=ZIP:10280&startdate=2010-05-01&enddate=2010-05-01&token=QGdQVDottDzkuRlaZbtAtRRRWyNrBZiE
 
+struct NOAA
+  token::String
+end
+
+abstract type NOAADataSet end
+
+struct GHCND <: NOAADataSet end
+struct GSOM <: NOAADataSet end
+
 _divide_10(x::Float64) = x / 10.0
 _divide_100(x::Float64) = x / 100.0
 const SCHEMAS = Dict{String, Tuple{Vector{DataType}, Vector{Symbol}}}(
   "GHCND" => ([Date, Float64, DateTime, DateTime, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, String],
-              [:DATE, :AWND, :FMTM, :PGTM, :PRCP, :SNOW, :SNWD, :TMAX, :TMIN, :WDF2, :WDF5, :WSF2, :WSF5, :WT])
+              [:DATE, :AWND, :FMTM, :PGTM, :PRCP, :SNOW, :SNWD, :TMAX, :TMIN, :WDF2, :WDF5, :WSF2, :WSF5, :WT]),
+  "GSOM" => ([Date, Float64, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Float64, Int, Int, Float64, Float64, Float64,
+              Float64, Float64, Int, Float64, Float64, Float64, Float64, Int, Int, Float64, Int, Float64, Int, Int, Int, Float64, Float64, Float64],
+              [:DATE, :AWND, :CDSD, :CLDD, :DP01, :DP05, :DP10, :DSND, :DSNW, :DT00, :DT32, :DX32, :DX70, :DX90, :EMNT, :EMSD, :EMSN, :EMXP,
+              :EMXT, :HDSD, :HTDD, :PRCP, :SNOW, :TAVG, :TMAX, :TMIN, :PSUN, :TSUN, :WDFM, :WSFM, :WDFG, :WSFG, :WDF1, :WDF2, :WDF5, :WSF1, :WSF2, :WSF5])
 )
 
-const CONVERTER = Dict{Symbol, Function}(
+const CONVERTER_GHCND = Dict{Symbol, Function}(
   :TMAX => _divide_10,
-  :TMIN => _divide_10,
-  :SNOW => _divide_10,
-  :PRCP => _divide_10
+  :TMIN => _divide_10
+  # :SNOW => _divide_10,
+  # :PRCP => _divide_10
 )
+
+const CONVERTER_GSOM = Dict{Symbol, Function}()
+
+_get_converter(::GHCND) = CONVERTER_GHCND
+_get_converter(::GSOM) = CONVERTER_GSOM
 
 const DATETIMEFORMAT = Dates.DateFormat("y-m-d HHMM")
 const DATEFORMAT = Dates.DateFormat("y-m-d")
 
 _flt_identity(v::Float64) = v
 _defaultval(::Type{Float64}, ::Date) = 0.0
+_defaultval(::Type{Int}, ::Date) = 0
 _defaultval(::Type{String}, ::Date) = ""
 _defaultval(::Type{Date}, d::Date) = d
 _defaultval(::Type{DateTime}, d::Date) = DateTime(d)
 
-_conversion(::Type{String}, v::Dict, ::Vector{Symbol}, ::Int) = v["datatype"]
+_conversion(::Type{String}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = v["datatype"]
 
-function _conversion(::Type{Float64}, v::Dict, symbarr::Vector{Symbol}, i::Int)
-  return get(CONVERTER, symbarr[i], _flt_identity)(float(v["value"]))
+function _conversion(::Type{Float64}, ds::NOAADataSet, v::Dict, symbarr::Vector{Symbol}, i::Int)
+  return get(_get_converter(ds), symbarr[i], _flt_identity)(float(v["value"]))
 end
 
-function _conversion(::Type{DateTime}, v::Dict, ::Vector{Symbol}, ::Int)
+_int_conversion(v) = parse(Int, v)
+_int_conversion(v::Int) = v
+_int_conversion(v::Float64) = round(Int, v)
+_conversion(::Type{Int}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = _int_conversion(v["value"])
+
+function _conversion(::Type{DateTime}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int)
   tm = string(v["value"])
   if length(tm) == 3
     tm = "0" * tm
@@ -45,15 +71,11 @@ end
 
 extendval(existingval::String, val::String) = existingval * " " * val
 
-struct NOAA
-  token::String
-end
-
-abstract type NOAADataSet end
-
-struct GHCND <: NOAADataSet end
-
 _get_schema(::GHCND) = SCHEMAS["GHCND"]
+_get_schema(::GSOM) = SCHEMAS["GSOM"]
+
+string(::GHCND) = "GHCND"
+string(::GSOM) = "GSOM"
 
 struct NOAADataResult{D <: NOAADataSet}
   data::Vector
@@ -62,10 +84,10 @@ struct NOAADataResult{D <: NOAADataSet}
   stationid::String
 end
 
-function get_data_set(::GHCND, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
+function get_data_set(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/data"
   query =  Dict{String, String}()
-  query["datasetid"] = "GHCND"
+  query["datasetid"] = string(ds)
   query["stationid"] = stationid
   query["startdate"] = string(startdate)
   query["enddate"] = string(enddate)
@@ -94,7 +116,7 @@ function get_data_set(::GHCND, noaa::NOAA, startdate::Date, enddate::Date, stati
     end
   end
 
-  return NOAADataResult(result, length(result), GHCND(), stationid)
+  return NOAADataResult(result, length(result), ds, stationid)
 end
 
 function _process_data(result::NOAADataResult)
@@ -124,7 +146,7 @@ function _process_data(result::NOAADataResult)
       rowiter += 1
     end
     coliter = get(indexlookup, data[i]["datatype"], numcols)
-    val = _conversion(schema[1][coliter], data[i], schema[2], coliter)
+    val = _conversion(schema[1][coliter], result.dataset, data[i], schema[2], coliter)
     if length(cols[coliter]) == rowiter
       # value already exists
       cols[coliter][rowiter] = extendval(cols[coliter][rowiter], val)
