@@ -23,7 +23,7 @@ Usage is fairly simple - an API key from NOAA is required: <https://www.ncdc.noa
 First, create the NOAA data object:
 ```julia
 apikey = "<your api key here>"
-noaa = NOAA(TOKEN)
+noaa = NOAA(apikey)
 ```
 
 Let's get some daily ob data from Central Park, NY (You must use the GHCND station id, which for Central Park is: GHCND:USW00094728)
