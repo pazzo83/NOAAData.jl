@@ -45,3 +45,5 @@ it = result_to_indexed_table(results)
 ```
 
 See those packages for more info on working with data sets in those structures.
+
+More info about the API and the data fields is available here: <https://www.ncdc.noaa.gov/cdo-web/webservices/v2>
