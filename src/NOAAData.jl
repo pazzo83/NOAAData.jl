@@ -5,7 +5,8 @@ import Base.string
 using Requests
 using DataTables
 using IndexedTables
-# https://www.ncdc.noaa.gov/cdo-web/api/v2/data?datasetid=GHCND&locationid=ZIP:10280&startdate=2010-05-01&enddate=2010-05-01&token=QGdQVDottDzkuRlaZbtAtRRRWyNrBZiE
+
+export NOAA, GHCND, GSOM, get_data_set, result_to_datatable, result_to_indexed_table
 
 struct NOAA
   token::String
@@ -74,6 +75,16 @@ extendval(existingval::String, val::String) = existingval * " " * val
 _get_schema(::GHCND) = SCHEMAS["GHCND"]
 _get_schema(::GSOM) = SCHEMAS["GSOM"]
 
+_check_date_range(::GHCND, d1::Date, d2::Date) = (d2 - d1).value < 366
+_check_date_range(::GSOM, d1::Date, d2::Date) = (d2 - d1).value < 1830
+
+function check_date_range(ds::NOAADataSet, d1::Date, d2::Date)
+  if d1 > d2
+    return false
+  end
+  return _check_date_range(ds, d1, d2)
+end
+
 string(::GHCND) = "GHCND"
 string(::GSOM) = "GSOM"
 
@@ -85,6 +96,7 @@ struct NOAADataResult{D <: NOAADataSet}
 end
 
 function get_data_set(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
+  check_date_range(ds, startdate, enddate) || error("Invalid date range")
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/data"
   query =  Dict{String, String}()
   query["datasetid"] = string(ds)
@@ -173,5 +185,16 @@ function result_to_datatable(result::NOAADataResult)
   cols, schema = _process_data(result)
   return DataTable(cols, schema[2])
 end
+
+# various indexed table f'ns for aggregating data
+# function aggregate(f::Function, arr::IndexedTable, col::Symbol)
+#   idxs, data = IndexedTables.aggregate_to(f, arr.index, arr.data.columns[col])
+#   return IndexedTable(idxs, data, presorted=true, copy=false)
+# end
+#
+# function aggregate_vec(f::Function, arr::IndexedTable, col::Symbol)
+#   idxs, data = IndexedTables.aggregate_vec_to(f, arr.index, arr.data.columns[col])
+#   return IndexedTable(idxs, data, presorted=true, copy=false)
+# end
 
 end # module
