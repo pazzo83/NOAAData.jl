@@ -1,12 +1,14 @@
 module NOAAData
 
-import Base.string
-
 using Requests
 using DataTables
 using IndexedTables
 
-export NOAA, GHCND, GSOM, get_data_set, result_to_datatable, result_to_indexed_table
+import Base.string, Base.get
+import DataTables.DataTable
+import IndexedTables.IndexedTable
+
+export NOAA, GHCND, GSOM, get, DataTable, IndexedTable
 
 struct NOAA
   token::String
@@ -22,9 +24,9 @@ _divide_100(x::Float64) = x / 100.0
 const SCHEMAS = Dict{String, Tuple{Vector{DataType}, Vector{Symbol}}}(
   "GHCND" => ([Date, Float64, DateTime, DateTime, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, String],
               [:DATE, :AWND, :FMTM, :PGTM, :PRCP, :SNOW, :SNWD, :TMAX, :TMIN, :WDF2, :WDF5, :WSF2, :WSF5, :WT]),
-  "GSOM" => ([Date, Float64, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Float64, Int, Int, Float64, Float64, Float64,
+  "GSOM" => ([Date, Float64, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Float64, Int, Int, Float64, Float64, Float64,
               Float64, Float64, Int, Float64, Float64, Float64, Float64, Int, Int, Float64, Int, Float64, Int, Int, Int, Float64, Float64, Float64],
-              [:DATE, :AWND, :CDSD, :CLDD, :DP01, :DP05, :DP10, :DSND, :DSNW, :DT00, :DT32, :DX32, :DX70, :DX90, :EMNT, :EMSD, :EMSN, :EMXP,
+              [:DATE, :AWND, :CDSD, :CLDD, :DP01, :DP05, :DP10, :DP1X, :DSND, :DSNW, :DT00, :DT32, :DX32, :DX70, :DX90, :EMNT, :EMSD, :EMSN, :EMXP,
               :EMXT, :HDSD, :HTDD, :PRCP, :SNOW, :TAVG, :TMAX, :TMIN, :PSUN, :TSUN, :WDFM, :WSFM, :WDFG, :WSFG, :WDF1, :WDF2, :WDF5, :WSF1, :WSF2, :WSF5])
 )
 
@@ -95,7 +97,7 @@ struct NOAADataResult{D <: NOAADataSet}
   stationid::String
 end
 
-function get_data_set(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
+function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
   check_date_range(ds, startdate, enddate) || error("Invalid date range")
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/data"
   query =  Dict{String, String}()
@@ -176,12 +178,12 @@ function _process_data(result::NOAADataResult)
   return cols, schema
 end
 
-function result_to_indexed_table(result::NOAADataResult)
+function IndexedTable(result::NOAADataResult)
   cols, schema = _process_data(result)
   return IndexedTable(Columns(cols[1]; names=schema[2][1:1]), Columns(cols[2:end]...; names=schema[2][2:end]))
 end
 
-function result_to_datatable(result::NOAADataResult)
+function DataTable(result::NOAADataResult)
   cols, schema = _process_data(result)
   return DataTable(cols, schema[2])
 end

@@ -9,15 +9,15 @@ noaa = NOAA(TOKEN)
 startdate = Date(2015, 1, 1)
 enddate = Date(2015, 12, 31)
 
-results = get_data_set(GHCND(), noaa, startdate, enddate, stationid)
+results = get(GHCND(), noaa, startdate, enddate, stationid)
 @test results.count == 3873
 
-dt = result_to_datatable(results)
+dt = DataTable(results)
 @test size(dt) == (365, 14)
 @test typeof(dt) == DataTables.DataTable
 @test dt[:TMAX][1] == 3.9
 
-it = result_to_indexed_table(results)
+it = IndexedTable(results)
 @test length(it) == 365
 @test typeof(it) == IndexedTables.IndexedTable{NamedTuples._NT_AWND_FMTM_PGTM_PRCP_SNOW_SNWD_TMAX_TMIN_WDF2_WDF5_WSF2_WSF5_WT{Float64,DateTime,DateTime,Float64,Float64,Float64,
                     Float64,Float64,Float64,Float64,Float64,Float64,String},Tuple{Date},NamedTuples._NT_DATE{Array{Date,1}},IndexedTables.Columns{
@@ -40,17 +40,17 @@ meantemp = IndexedTables.convertdim(IndexedTables.columns(it, :TMAX), 1, Dates.m
 
 # let's try a new data type
 startdate = Date(2011, 1, 1)
-results = get_data_set(GSOM(), noaa, startdate, enddate, stationid)
+results = get(GSOM(), noaa, startdate, enddate, stationid)
 
 @test results.count == 1739
 
-dt = result_to_datatable(results)
-@test size(dt) == (60, 38)
+dt = DataTable(results)
+@test size(dt) == (60, 39)
 
-it = result_to_indexed_table(results)
+it = IndexedTable(results)
 @test length(it.data) == 60
 
 # Test errors
 startdate = Date(1985, 1, 1)
-@test_throws ErrorException get_data_set(GSOM(), noaa, startdate, enddate, stationid)
-@test_throws ErrorException get_data_set(GHCND(), noaa, startdate, enddate, stationid)
+@test_throws ErrorException get(GSOM(), noaa, startdate, enddate, stationid)
+@test_throws ErrorException get(GHCND(), noaa, startdate, enddate, stationid)

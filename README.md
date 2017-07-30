@@ -34,14 +34,14 @@ enddate = Date(2015, 12, 31)
 ```
 The main method to get data is: get_data_set:
 ```julia
-results = get_data_set(GHCND(), noaa, startdate, enddate, stationid)
+results = get(GHCND(), noaa, startdate, enddate, stationid)
 ```
 
 This returns a NOAADataResult object, which you can use to generated more meaningful data structures.
 Currently this package supports DataTables and IndexedTables:
 ```julia
-dt = result_to_datatable(results)
-it = result_to_indexed_table(results)
+dt = DataTable(results)
+it = IndexedTable(results)
 ```
 
 See those packages for more info on working with data sets in those structures.
