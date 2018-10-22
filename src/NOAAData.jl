@@ -8,9 +8,9 @@ using JSON
 
 import Base.string, Base.get
 import DataFrames.DataFrame
-import IndexedTables.IndexedTable
+import IndexedTables.NDSparse
 
-export NOAA, GHCND, GSOM, get, DataFrame, IndexedTable
+export NOAA, GHCND, GSOM, get, DataFrame, NDSparse, selectdata, aggregate_vec
 
 struct NOAA
   token::String
@@ -181,14 +181,14 @@ function _process_data(result::NOAADataResult)
   return cols, schema
 end
 
-function IndexedTable(result::NOAADataResult)
+function NDSparse(result::NOAADataResult)
   cols, schema = _process_data(result)
-  return IndexedTable(Columns(cols[1]; names=schema[2][1:1]), Columns(cols[2:end]...; names=schema[2][2:end]))
+  return NDSparse(Columns(cols[1]; names=schema[2][1:1]), Columns(cols[2:end]...; names=schema[2][2:end]))
 end
 
-function DataTable(result::NOAADataResult)
+function DataFrame(result::NOAADataResult)
   cols, schema = _process_data(result)
-  return DataTable(cols, schema[2])
+  return DataFrame(cols, schema[2])
 end
 
 # various indexed table f'ns for aggregating data
@@ -196,10 +196,15 @@ end
 #   idxs, data = IndexedTables.aggregate_to(f, arr.index, arr.data.columns[col])
 #   return IndexedTable(idxs, data, presorted=true, copy=false)
 # end
-#
+
 # function aggregate_vec(f::Function, arr::IndexedTable, col::Symbol)
 #   idxs, data = IndexedTables.aggregate_vec_to(f, arr.index, arr.data.columns[col])
 #   return IndexedTable(idxs, data, presorted=true, copy=false)
+# end
+
+# function selectdata(it::IndexedTable, which::IndexedTables.DimName...)
+#   IndexedTables.flush!(it)
+#   IndexedTable(it.index, Columns(it.data.columns[[:TMAX]]))
 # end
 
 end # module
