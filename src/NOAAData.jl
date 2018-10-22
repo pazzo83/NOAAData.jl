@@ -209,7 +209,7 @@ end
 
 ## station queries
 
-function getstations(noaa::NOAA; dataset::NOAADataSet = nothing, locationid::String = nothing, extent::Vector{Float64} = nothing)
+function getstations(noaa::NOAA; dataset::Union{NOAADataSet, Nothing} = nothing, locationid::Union{String, Nothing} = nothing, extent::Union{Vector{Float64}, Nothing} = nothing)
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/stations"
   query = Dict{String, String}()
   if dataset != nothing
