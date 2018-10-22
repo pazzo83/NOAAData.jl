@@ -207,4 +207,54 @@ end
 #   IndexedTable(it.index, Columns(it.data.columns[[:TMAX]]))
 # end
 
+## station queries
+
+function getstations(noaa::NOAA; dataset::NOAADataSet = nothing, locationid::String = nothing, extent::Vector{Float64} = nothing)
+  baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/stations"
+  query = Dict{String, String}()
+  if dataset != nothing
+    query["datasetid"] = string(dataset)
+  end
+
+  if locationid != nothing
+    query["locationid"] = locationid
+  end
+
+  if extent != nothing
+    query["extent"] = join(extent, ",")
+  end
+
+  query["limit"] = "1000"
+
+  headers = Dict{String, String}()
+  headers["token"] = noaa.token
+
+  result = []
+  while true
+    resp = HTTP.get(baseurl, headers; query=query)
+    js = JSON.parse(String(resp.body))
+    offset = 1
+    if length(js["results"]) == 1000
+      # we probably maxed out, need to get a new query
+      append!(result, js["results"])
+      offset += 1000
+      query["offset"] = string(offset)
+    else
+      append!(result, js["results"])
+      break
+    end
+  end
+
+  # build dataframe from list of dicts
+  DataFrame(
+    id = getindex.(result, "id"), 
+    name = getindex.(result, "name"), 
+    latitude = getindex.(result, "latitude"), 
+    longitude = getindex.(result, "longitude"), 
+    mindate = Date.(getindex.(result, "mindate")), 
+    maxdate = Date.(getindex.(result, "maxdate"))
+  )
+end
+
+
 end # module
