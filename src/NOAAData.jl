@@ -1,14 +1,16 @@
 module NOAAData
 
-using Requests
-using DataTables
+using HTTP
+using DataFrames
 using IndexedTables
+using Dates
+using JSON
 
 import Base.string, Base.get
-import DataTables.DataTable
+import DataFrames.DataFrame
 import IndexedTables.IndexedTable
 
-export NOAA, GHCND, GSOM, get, DataTable, IndexedTable
+export NOAA, GHCND, GSOM, get, DataFrame, IndexedTable
 
 struct NOAA
   token::String
@@ -111,7 +113,8 @@ function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, statio
 
   result = []
   while true
-    js = Requests.json(get(baseurl, query=query, headers=headers))
+    resp = HTTP.get(baseurl, headers; query=query)
+    js = JSON.parse(String(resp.body))
     if length(js["results"]) == 1000
       # we probably maxed out, need to get a new query
       i = 1000
