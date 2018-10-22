@@ -115,18 +115,22 @@ function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, statio
   while true
     resp = HTTP.get(baseurl, headers; query=query)
     js = JSON.parse(String(resp.body))
+    offset = 1
     if length(js["results"]) == 1000
       # we probably maxed out, need to get a new query
       i = 1000
-      latestdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
-      currdate = latestdate
-      while currdate == latestdate
-        i -= 1
-        currdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
-      end
-      append!(result, js["results"][1:i])
-      query["startdate"] = string(latestdate)
-      query["enddate"] = string(enddate)
+      # latestdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
+      # currdate = latestdate
+      # while currdate == latestdate
+      #   i -= 1
+      #   currdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
+      # end
+      # append!(result, js["results"][1:i])
+      # query["startdate"] = string(latestdate)
+      # query["enddate"] = string(enddate)
+      append!(result, js["results"])
+      offset += 1000
+      query["offset"] = string(offset)
     else
       append!(result, js["results"])
       break
