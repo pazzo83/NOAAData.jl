@@ -35,9 +35,9 @@ const SCHEMAS = Dict{String, Tuple{Vector{DataType}, Vector{Symbol}}}(
 
 const CONVERTER_GHCND = Dict{Symbol, Function}(
   :TMAX => _divide_10,
-  :TMIN => _divide_10
+  :TMIN => _divide_10,
   # :SNOW => _divide_10,
-  # :PRCP => _divide_10
+  :PRCP => _divide_10
 )
 
 const CONVERTER_GSOM = Dict{Symbol, Function}()
