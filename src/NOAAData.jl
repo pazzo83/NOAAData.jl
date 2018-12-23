@@ -113,10 +113,10 @@ function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, statio
   headers["token"] = noaa.token
 
   result = []
+  offset = 1
   while true
     resp = HTTP.get(baseurl, headers; query=query)
     js = JSON.parse(String(resp.body))
-    offset = 1
     if length(js["results"]) == 1000
       # we probably maxed out, need to get a new query
       i = 1000
