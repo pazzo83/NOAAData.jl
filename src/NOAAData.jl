@@ -49,9 +49,10 @@ const DATETIMEFORMAT = Dates.DateFormat("y-m-d HHMM")
 const DATEFORMAT = Dates.DateFormat("y-m-d")
 
 _flt_identity(v::Float64) = v
-_defaultval(::Type{Float64}, ::Date) = 0.0
-_defaultval(::Type{Int}, ::Date) = 0
-_defaultval(::Type{String}, ::Date) = ""
+# _defaultval(::Type{Float64}, ::Date) = 0.0
+# _defaultval(::Type{Int}, ::Date) = 0
+# _defaultval(::Type{String}, ::Date) = ""
+_defaultval(::Type, ::Date) = nothing
 _defaultval(::Type{Date}, d::Date) = d
 _defaultval(::Type{DateTime}, d::Date) = DateTime(d)
 
