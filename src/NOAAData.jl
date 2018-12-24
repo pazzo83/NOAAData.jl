@@ -27,7 +27,7 @@ _divide_100(x::Float64) = x / 100.0
 const SCHEMAS = Dict{String, Tuple{Vector{Union{DataType, Union}}, Vector{Symbol}}}(
   "GHCND" => ([Date, Union{Float64, Nothing}, DateTime, DateTime, Union{Float64, Nothing}, Union{Float64, Nothing}, 
               Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, 
-              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, String}],
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{String, Nothing}],
               [:DATE, :AWND, :FMTM, :PGTM, :PRCP, :SNOW, :SNWD, :TMAX, :TMIN, :WDF2, :WDF5, :WSF2, :WSF5, :WT]),
   "GSOM" => ([Date, Union{Float64, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, 
               Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, 
