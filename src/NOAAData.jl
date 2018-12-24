@@ -24,7 +24,7 @@ struct GSOM <: NOAADataSet end
 
 _divide_10(x::Float64) = x / 10.0
 _divide_100(x::Float64) = x / 100.0
-const SCHEMAS = Dict{String, Tuple{Vector{DataType}, Vector{Symbol}}}(
+const SCHEMAS = Dict{String, Tuple{Vector{Union{DataType, Union}}, Vector{Symbol}}}(
   "GHCND" => ([Date, Union{Float64, Nothing}, DateTime, DateTime, Union{Float64, Nothing}, Union{Float64, Nothing}, 
               Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, 
               Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, String}],
