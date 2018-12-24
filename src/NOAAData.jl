@@ -25,10 +25,18 @@ struct GSOM <: NOAADataSet end
 _divide_10(x::Float64) = x / 10.0
 _divide_100(x::Float64) = x / 100.0
 const SCHEMAS = Dict{String, Tuple{Vector{DataType}, Vector{Symbol}}}(
-  "GHCND" => ([Date, Float64, DateTime, DateTime, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, Float64, String],
+  "GHCND" => ([Date, Union{Float64, Nothing}, DateTime, DateTime, Union{Float64, Nothing}, Union{Float64, Nothing}, 
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, 
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, String}],
               [:DATE, :AWND, :FMTM, :PGTM, :PRCP, :SNOW, :SNWD, :TMAX, :TMIN, :WDF2, :WDF5, :WSF2, :WSF5, :WT]),
-  "GSOM" => ([Date, Float64, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Int, Float64, Int, Int, Float64, Float64, Float64,
-              Float64, Float64, Int, Float64, Float64, Float64, Float64, Int, Int, Float64, Int, Float64, Int, Int, Int, Float64, Float64, Float64],
+  "GSOM" => ([Date, Union{Float64, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, 
+              Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, 
+              Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Float64, Nothing}, 
+              Union{Int, Nothing}, Union{Int, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing},
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Int, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}, 
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Float64, Nothing}, 
+              Union{Int, Nothing}, Union{Float64, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, Union{Int, Nothing}, 
+              Union{Float64, Nothing}, Union{Float64, Nothing}, Union{Float64, Nothing}],
               [:DATE, :AWND, :CDSD, :CLDD, :DP01, :DP05, :DP10, :DP1X, :DSND, :DSNW, :DT00, :DT32, :DX32, :DX70, :DX90, :EMNT, :EMSD, :EMSN, :EMXP,
               :EMXT, :HDSD, :HTDD, :PRCP, :SNOW, :TAVG, :TMAX, :TMIN, :PSUN, :TSUN, :WDFM, :WSFM, :WDFG, :WSFG, :WDF1, :WDF2, :WDF5, :WSF1, :WSF2, :WSF5])
 )
