@@ -57,6 +57,7 @@ const DATETIMEFORMAT = Dates.DateFormat("y-m-d HHMM")
 const DATEFORMAT = Dates.DateFormat("y-m-d")
 
 _flt_identity(v::Float64) = v
+_flt_identity(::Nothing) = nothing
 # _defaultval(::Type{Float64}, ::Date) = 0.0
 # _defaultval(::Type{Int}, ::Date) = 0
 # _defaultval(::Type{String}, ::Date) = ""
@@ -64,16 +65,19 @@ _defaultval(::Type, ::Date) = nothing
 _defaultval(::Type{Date}, d::Date) = d
 _defaultval(::Type{DateTime}, d::Date) = DateTime(d)
 
-_conversion(::Type{String}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = v["datatype"]
+_conversion(::Type{Union{Nothing, String}}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = v["datatype"]
 
-function _conversion(::Type{Float64}, ds::NOAADataSet, v::Dict, symbarr::Vector{Symbol}, i::Int)
-  return get(_get_converter(ds), symbarr[i], _flt_identity)(float(v["value"]))
+_flt_conversion(v) = float(v)
+_flt_conversion(v::Nothing) = nothing
+function _conversion(::Type{Union{Nothing, Float64}}, ds::NOAADataSet, v::Dict, symbarr::Vector{Symbol}, i::Int)
+  return get(_get_converter(ds), symbarr[i], _flt_identity)(_flt_conversion(v["value"]))
 end
 
 _int_conversion(v) = parse(Int, v)
 _int_conversion(v::Int) = v
 _int_conversion(v::Float64) = round(Int, v)
-_conversion(::Type{Int}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = _int_conversion(v["value"])
+_int_conversion(v::Nothing) = nothing
+_conversion(::Type{Union{Nothing, Int}}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = _int_conversion(v["value"])
 
 function _conversion(::Type{DateTime}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int)
   tm = string(v["value"])
