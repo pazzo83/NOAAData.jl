@@ -65,21 +65,21 @@ _defaultval(::Type, ::Date) = nothing
 _defaultval(::Type{Date}, d::Date) = d
 _defaultval(::Type{DateTime}, d::Date) = DateTime(d)
 
-_conversion(::Type{Union{Nothing, String}}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = v["datatype"]
+_conversion(::Type{Union{Nothing, String}}, ::NOAADataSet, v::Dict, ::Symbol) = v["datatype"]
 
 _flt_conversion(v) = float(v)
 _flt_conversion(v::Nothing) = nothing
-function _conversion(::Type{Union{Nothing, Float64}}, ds::NOAADataSet, v::Dict, symbarr::Vector{Symbol}, i::Int)
-  return get(_get_converter(ds), symbarr[i], _flt_identity)(_flt_conversion(v["value"]))
+function _conversion(::Type{Union{Nothing, Float64}}, ds::NOAADataSet, v::Dict, symb::Symbol)
+  return get(_get_converter(ds), symb, _flt_identity)(_flt_conversion(v["value"]))
 end
 
 _int_conversion(v) = parse(Int, v)
 _int_conversion(v::Int) = v
 _int_conversion(v::Float64) = round(Int, v)
 _int_conversion(v::Nothing) = nothing
-_conversion(::Type{Union{Nothing, Int}}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int) = _int_conversion(v["value"])
+_conversion(::Type{Union{Nothing, Int}}, ::NOAADataSet, v::Dict, ::Symbol) = _int_conversion(v["value"])
 
-function _conversion(::Type{DateTime}, ::NOAADataSet, v::Dict, ::Vector{Symbol}, ::Int)
+function _conversion(::Type{DateTime}, ::NOAADataSet, v::Dict, ::Symbol)
   tm = string(v["value"])
   if length(tm) == 3
     tm = "0" * tm
@@ -157,14 +157,7 @@ end
 function _process_data(result::NOAADataResult)
   schema = _get_schema(result.dataset)
   data = result.data
-  cols = Vector[]
-  indexlookup = Dict{String, Int}()
-  numcols = length(schema[1])
-  for i in eachindex(schema[1])
-    dt = schema[1][i]
-    push!(cols, dt[])
-    indexlookup[string(schema[2][i])] = i
-  end
+  cols = NamedTuple{Tuple(schema[2])}(dt[] for dt =schema[1])
   i = 1
   rowiter = 1
   startingdate = Date(split(data[i]["date"], "T")[1], DATEFORMAT)
@@ -172,7 +165,7 @@ function _process_data(result::NOAADataResult)
     currdate = Date(split(data[i]["date"], "T")[1], DATEFORMAT)
     if currdate != startingdate
       # check for blanks
-      for col in cols
+      for col = cols
         if length(col) != rowiter
           push!(col, _defaultval(eltype(col), startingdate))
         end
@@ -180,8 +173,8 @@ function _process_data(result::NOAADataResult)
       startingdate = currdate
       rowiter += 1
     end
-    coliter = get(indexlookup, data[i]["datatype"], numcols)
-    val = _conversion(schema[1][coliter], result.dataset, data[i], schema[2], coliter)
+    coliter = Symbol(data[i]["datatype"])
+    val = _conversion(eltype(cols[coliter]), result.dataset, data[i], coliter)
     if length(cols[coliter]) == rowiter
       # value already exists
       cols[coliter][rowiter] = extendval(cols[coliter][rowiter], val)
@@ -191,7 +184,7 @@ function _process_data(result::NOAADataResult)
     i += 1
   end
   # final cleanup
-  for col in cols
+  for col = cols
     if length(col) != rowiter
       push!(col, _defaultval(eltype(col), startingdate))
     end
