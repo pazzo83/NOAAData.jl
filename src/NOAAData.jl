@@ -11,7 +11,7 @@ import Base.string, Base.get
 import DataFrames.DataFrame
 import IndexedTables.NDSparse
 
-export NOAA, GHCND, GSOM, get, DataFrame, NDSparse, selectdata, aggregate_vec
+export NOAA, GHCND, GSOM, get, DataFrame, NDSparse, getstations
 
 struct NOAA
   token::String
@@ -44,6 +44,7 @@ const SCHEMAS = Dict{String, Tuple{Vector{Union{DataType, Union}}, Vector{Symbol
 const CONVERTER_GHCND = Dict{Symbol, Function}(
   :TMAX => _divide_10,
   :TMIN => _divide_10,
+  :TAVG => _divide_10,
   # :SNOW => _divide_10,
   :PRCP => _divide_10
 )
@@ -113,6 +114,26 @@ struct NOAADataResult{D <: NOAADataSet}
   stationid::String
 end
 
+function getresults(baseurl::String, headers::Dict{String, String}, query::Dict{String, String})
+  result = []
+  offset = 1
+  while true
+    resp = HTTP.get(baseurl, headers; query=query)
+    js = JSON.parse(String(resp.body))
+    if length(js["results"]) == 1000
+      # we probably maxed out, need to get a new query
+      append!(result, js["results"])
+      offset += 1000
+      query["offset"] = string(offset)
+    else
+      append!(result, js["results"])
+      break
+    end
+  end
+
+  return result
+end
+
 function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, stationid::String)
   check_date_range(ds, startdate, enddate) || error("Invalid date range")
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/data"
@@ -125,31 +146,7 @@ function get(ds::NOAADataSet, noaa::NOAA, startdate::Date, enddate::Date, statio
   headers = Dict{String, String}()
   headers["token"] = noaa.token
 
-  result = []
-  offset = 1
-  while true
-    resp = HTTP.get(baseurl, headers; query=query)
-    js = JSON.parse(String(resp.body))
-    if length(js["results"]) == 1000
-      # we probably maxed out, need to get a new query
-      i = 1000
-      # latestdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
-      # currdate = latestdate
-      # while currdate == latestdate
-      #   i -= 1
-      #   currdate = Date(split(js["results"][i]["date"], "T")[1], DATEFORMAT)
-      # end
-      # append!(result, js["results"][1:i])
-      # query["startdate"] = string(latestdate)
-      # query["enddate"] = string(enddate)
-      append!(result, js["results"])
-      offset += 1000
-      query["offset"] = string(offset)
-    else
-      append!(result, js["results"])
-      break
-    end
-  end
+  result = getresults(baseurl, headers, query)
 
   return NOAADataResult(result, length(result), ds, stationid)
 end
@@ -203,25 +200,16 @@ function DataFrame(result::NOAADataResult)
   return DataFrame(cols, schema[2])
 end
 
-# various indexed table f'ns for aggregating data
-# function aggregate(f::Function, arr::IndexedTable, col::Symbol)
-#   idxs, data = IndexedTables.aggregate_to(f, arr.index, arr.data.columns[col])
-#   return IndexedTable(idxs, data, presorted=true, copy=false)
-# end
-
-# function aggregate_vec(f::Function, arr::IndexedTable, col::Symbol)
-#   idxs, data = IndexedTables.aggregate_vec_to(f, arr.index, arr.data.columns[col])
-#   return IndexedTable(idxs, data, presorted=true, copy=false)
-# end
-
-# function selectdata(it::IndexedTable, which::IndexedTables.DimName...)
-#   IndexedTables.flush!(it)
-#   IndexedTable(it.index, Columns(it.data.columns[[:TMAX]]))
-# end
-
 ## station queries
 
-function getstations(noaa::NOAA; dataset::Union{NOAADataSet, Nothing} = nothing, locationid::Union{String, Nothing} = nothing, extent::Union{Vector{Float64}, Nothing} = nothing)
+function getstations(
+    noaa::NOAA; 
+    dataset::Union{NOAADataSet, Nothing} = nothing, 
+    locationid::Union{String, Nothing} = nothing, 
+    extent::Union{Vector{Float64}, Nothing} = nothing,
+    startdate::Union{Date, Nothing} = nothing,
+    enddate::Union{Date, Nothing} = nothing
+  )
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/stations"
   query = Dict{String, String}()
   if dataset != nothing
@@ -236,26 +224,20 @@ function getstations(noaa::NOAA; dataset::Union{NOAADataSet, Nothing} = nothing,
     query["extent"] = join(extent, ",")
   end
 
+  if startdate != nothing
+    query["startdate"] = string(startdate)
+  end
+
+  if enddate != nothing
+    query["enddate"] = string(enddate)
+  end
+
   query["limit"] = "1000"
 
   headers = Dict{String, String}()
   headers["token"] = noaa.token
 
-  result = []
-  offset = 1
-  while true
-    resp = HTTP.get(baseurl, headers; query=query)
-    js = JSON.parse(String(resp.body))
-    if length(js["results"]) == 1000
-      # we probably maxed out, need to get a new query
-      append!(result, js["results"])
-      offset += 1000
-      query["offset"] = string(offset)
-    else
-      append!(result, js["results"])
-      break
-    end
-  end
+  result = getresults(baseurl, headers, query)
 
   # build dataframe from list of dicts
   DataFrame(
@@ -264,9 +246,60 @@ function getstations(noaa::NOAA; dataset::Union{NOAADataSet, Nothing} = nothing,
     latitude = getindex.(result, "latitude"), 
     longitude = getindex.(result, "longitude"), 
     mindate = Date.(getindex.(result, "mindate")), 
-    maxdate = Date.(getindex.(result, "maxdate"))
+    maxdate = Date.(getindex.(result, "maxdate")),
+    elevation = getindex.(result, "elevation"),
+    elevation_unit = getindex.(result, "elevationUnit"),
+    datacoverage = getindex.(result, "datacoverage")
   )
 end
 
+## location queries
+
+function getlocations(
+    noaa::NOAA; 
+    dataset::Union{NOAADataSet, Nothing} = nothing, 
+    locationcategoryid::Union{String, Nothing} = nothing, 
+    extent::Union{Vector{Float64}, Nothing} = nothing,
+    startdate::Union{Date, Nothing} = nothing,
+    enddate::Union{Date, Nothing} = nothing
+  )
+  baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/locations"
+  query = Dict{String, String}()
+  if dataset != nothing
+    query["datasetid"] = string(dataset)
+  end
+
+  if locationcategoryid != nothing
+    query["locationcategoryid"] = locationcategoryid
+  end
+
+  if extent != nothing
+    query["extent"] = join(extent, ",")
+  end
+
+  if startdate != nothing
+    query["startdate"] = string(startdate)
+  end
+
+  if enddate != nothing
+    query["enddate"] = string(enddate)
+  end
+
+  query["limit"] = "1000"
+
+  headers = Dict{String, String}()
+  headers["token"] = noaa.token
+
+  result = getresults(baseurl, headers, query)
+
+  # build dataframe from list of dicts
+  DataFrame(
+    id = getindex.(result, "id"), 
+    name = getindex.(result, "name"), 
+    mindate = Date.(getindex.(result, "mindate")), 
+    maxdate = Date.(getindex.(result, "maxdate")),
+    datacoverage = getindex.(result, "datacoverage")
+  )
+end
 
 end # module
