@@ -174,12 +174,13 @@ function _process_data(result::NOAADataResult)
       rowiter += 1
     end
     coliter = Symbol(data[i]["datatype"])
-    val = _conversion(eltype(cols[coliter]), result.dataset, data[i], coliter)
-    if length(cols[coliter]) == rowiter
+    coltoadd = get(cols, coliter, cols[end])
+    val = _conversion(eltype(coltoadd), result.dataset, data[i], coliter)
+    if length(coltoadd) == rowiter
       # value already exists
-      cols[coliter][rowiter] = extendval(cols[coliter][rowiter], val)
+      coltoadd[rowiter] = extendval(coltoadd[rowiter], val)
     else
-      push!(cols[coliter], val)
+      push!(coltoadd, val)
     end
     i += 1
   end
