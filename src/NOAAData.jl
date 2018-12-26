@@ -11,7 +11,7 @@ import Base.string, Base.get
 import DataFrames.DataFrame
 import IndexedTables.NDSparse
 
-export NOAA, GHCND, GSOM, get, DataFrame, NDSparse, getstations
+export NOAA, GHCND, GSOM, get, DataFrame, NDSparse, getstations, getlocations
 
 struct NOAA
   token::String
@@ -208,7 +208,8 @@ function getstations(
     locationid::Union{String, Nothing} = nothing, 
     extent::Union{Vector{Float64}, Nothing} = nothing,
     startdate::Union{Date, Nothing} = nothing,
-    enddate::Union{Date, Nothing} = nothing
+    enddate::Union{Date, Nothing} = nothing,
+    datacategoryid::Union{String, Nothing} = nothing
   )
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/stations"
   query = Dict{String, String}()
@@ -230,6 +231,10 @@ function getstations(
 
   if enddate != nothing
     query["enddate"] = string(enddate)
+  end
+
+  if datacategoryid != nothing
+    query["datacategoryid"] = datacategoryid
   end
 
   query["limit"] = "1000"
@@ -261,7 +266,8 @@ function getlocations(
     locationcategoryid::Union{String, Nothing} = nothing, 
     extent::Union{Vector{Float64}, Nothing} = nothing,
     startdate::Union{Date, Nothing} = nothing,
-    enddate::Union{Date, Nothing} = nothing
+    enddate::Union{Date, Nothing} = nothing,
+    datacategoryid::Union{String, Nothing} = nothing
   )
   baseurl = "https://www.ncdc.noaa.gov/cdo-web/api/v2/locations"
   query = Dict{String, String}()
@@ -283,6 +289,10 @@ function getlocations(
 
   if enddate != nothing
     query["enddate"] = string(enddate)
+  end
+
+  if datacategoryid != nothing
+    query["datacategoryid"] = datacategoryid
   end
 
   query["limit"] = "1000"
